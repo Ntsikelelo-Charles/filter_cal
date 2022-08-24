@@ -55,7 +55,8 @@ for mode in range (len(file)):
         antpos = F.antpos
         filter_fun=np.zeros(F.frates.shape)
         sigma_frac={}
-        filt_data = copy.deepcopy(F.data)
+        filt_data = copy.deepcopy(F_model.data)
+        filt_data = copy.deepcopy(F_modelhah.data)
         for k in F.data:
             blvec = (antpos[k[1]] - antpos[k[0]])
             bl_len_EW = blvec[0]
@@ -102,6 +103,7 @@ for mode in range (len(file)):
                 C = uvt.dspec.dayenu_mat_inv(times, filter_center, filter_half_width, filter_factor, no_regularization=False)
                 R = np.linalg.pinv(C, rcond=1e-10)
                 filt_data[k] = filt_data[k] - R @ filt_data[k]
+                
 
         F.write_data(filt_data,path+file_output[mode],overwrite=True)
     
