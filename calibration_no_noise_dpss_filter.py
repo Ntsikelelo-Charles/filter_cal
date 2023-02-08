@@ -11,10 +11,9 @@ import hera_pspec as hp
 import hera_cal as hc
 import healpy
 
-path='/net/ike/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 path2='/home/ntsikelelo/Simulated_data_files/UVH5_files/'
 
-## need for gain keys
 
 all_filter_type=np.array(["notch_filter_0.25_dssp_noise_free","notch_filter_0.40_dssp_noise_free","notch_filter_0.60_dssp_noise_free"])
 for filt in range (len(all_filter_type)):
@@ -36,9 +35,7 @@ for filt in range (len(all_filter_type)):
 
     mode_array=np.array(["incomplete_with_filter_baseline_cut"])
     
-
-
-    sigma_frac=np.load('/net/ike/vault-ike/ntsikelelo/Simulated_data_files/sigma_frac_'+str(filter_max)+'.npy')                   
+                  
 
 
     t=np.array([118,126])
@@ -47,11 +44,8 @@ for filt in range (len(all_filter_type)):
     gains_all_times=np.zeros(shape=(91,200,308),dtype=complex)
     gains_all_times_redcal=np.zeros(shape=(91,200,308),dtype=complex)
 
-    cal_wedge_all=np.zeros(shape=(200,51,308),dtype=complex)
-    mdl_wedge_all=np.zeros(shape=(200,51,308),dtype=complex)
-
-#     cal_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
-#     mdl_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
+    cal_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
+    mdl_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
 
     model_file=''
     raw_file=path+'Raw_filtered_data_no_noise_'+str(filter_max)+'.uvh5'
@@ -129,15 +123,7 @@ for filt in range (len(all_filter_type)):
 
             noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / Nrms**2 for k in raw_data}
 
-            if mode=="incomplete_with_filter_baseline_cut" or mode=="complete_with_filter_baseline_cut" :
-                print("base line cut")
-                for k in raw_data:
-                    blvec = (antpos[k[0]] - antpos[k[1]])
-                    bl_len_EW = np.abs(blvec[0])
-                   
-                    if bl_len_EW < 15:    
-                        noise_wgts[k][:] = 1e-40
-
+           
 
             print("data loaded")                
             # get redundant baseline groups
@@ -179,8 +165,28 @@ for filt in range (len(all_filter_type)):
             # run post-redundant calibration abscal
             rc_flags = {k: np.zeros_like(lincal_gains[k], dtype=bool) for k in lincal_gains}
             print("performing abs_cal post redcal")
-            abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False,phs_max_iter=200, phs_conv_crit=1e-8)
+            
+            if mode=="incomplete_with_filter_baseline_cut" or mode=="complete_with_filter_baseline_cut" :
+                print("base line cut")
+                for k in raw_data:
+                    blvec = (antpos[k[0]] - antpos[k[1]])
+                    bl_len_EW = np.abs(blvec[0])
+                   
+                    if bl_len_EW < 30:    
+                        noise_wgts[k][:] = 1e-40
 
+            abs_noise_wgts = copy.deepcopy(noise_wgts)
+            if mode=="incomplete_with_filter_baseline_cut":
+                Ncut = 0
+                for k in list(abs_noise_wgts):
+                    bl_len = np.linalg.norm(antpos_d[k[1]] - antpos_d[k[0]])
+                    angle_ratio = np.angle(model[k] / redcal_data[k])
+                    if (np.abs(angle_ratio) > 2).any():
+                        abs_noise_wgts[k][:] = 1e-40
+                        Ncut += 1
+                print("Cut {} bls out of {}".format(Ncut, len(abs_noise_wgts)))
+
+            abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, abs_noise_wgts, rc_flags, verbose=False, phs_max_iter=100, phs_conv_crit=1e-6)
             print("done callibration")
             ref_ant = (0, 'Jee')
             # combine redcal and abscal gains

@@ -14,7 +14,7 @@ from hera_cal.abscal import fill_dict_nans
 ## run this in Jake! gains
 
 # load the metadata
-path='/net/ike/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 model = hc.io.HERAData(path+'Model_data_complete.uvh5')
 times = np.unique(model.time_array)
 model.read()
@@ -36,15 +36,15 @@ ants = sorted(set(np.ravel([k[:2] for k in model_data.keys()])))
 
 np.random.seed(0)
 Nants = len(ants)
-amps = np.random.normal(0.002, 0.0005, Nants) # amp
+amps = np.random.normal(0.03, 0.001, Nants) # amp
 #phs = np.random.normal(0, np.pi/4, Nants) # radians
 dly =0*np.random.normal(0, 200, Nants) * 1e-9 # in seconds
-amp_plaw = np.random.normal(0.0, 0.5, Nants)
+amp_plaw = np.random.normal(-2.6, 0.2, Nants)
 gains = amps * (freqs[:, None] / 150)**amp_plaw * np.exp(1j * 2 * np.pi * dly * freqs[:, None]*1e6)
 phase_gains=np.zeros(gains.shape,dtype=complex)
 for ant in range(Nants):
-    k = np.random.normal(0.005, 0.0005, 1)
-    phs=np.cos(k*freqs)+np.sin(k*freqs)
+    k_a,k_b = np.random.normal(0.005, 0.0005, 2)
+    phs=np.cos(k_a*freqs)+np.sin(k_b*freqs)
     phase_gains[:,ant]=np.exp(1j * phs)
 gains*=phase_gains 
 
@@ -61,7 +61,7 @@ hc.abscal.rephase_to_refant(full_gains, refant=ref_ant)
 from pyuvdata import UVData, UVBeam, utils as uvutils
 glm=model
 #load gains
-path2='/net/ike/vault-ike/nkern/hera_phaseI_validation/'
+path2='/net/sinatra/vault-ike/nkern/hera_phaseI_validation/'
 uvc = hc.io.HERACal(path2+"gains/2458101.sum.true_gains.singletime.calfits")
 uvc.read()
 uvc.select(freq_chans=np.arange(1024)[512:512+len(model.freqs)],jones=[-5])  # select out high band
@@ -95,7 +95,7 @@ uvc.x_orientation='east'
 model_corrupt=copy.deepcopy(model)
 raw = uvutils.uvcalibrate(model_corrupt, uvc, inplace=False, undo=True, time_check=False)
 
-# Nrms =1e-5
+# Nrms =1e-6
 
 # print("noise rms = "+str(Nrms))
 # noise=(np.random.normal(0, 1, raw.data_array.size)+ 1j * np.random.normal(0, 1, raw.data_array.size)).reshape(raw.data_array.shape)*(Nrms/np.sqrt(2))

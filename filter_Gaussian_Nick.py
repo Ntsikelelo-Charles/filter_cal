@@ -43,15 +43,12 @@ uvd.conjugate_bls()
 F_incomplete = hc.frf.FRFilter(uvd)
 
 # raw_file = path2+"Raw_data_with_noise.uvh5"
-
 raw_file = path2+"Raw_data_no_noise.uvh5"
 raw = hc.frf.FRFilter(raw_file)
 uvd = UVData()
 uvd.read(raw_file)
 uvd.conjugate_bls()
 F_raw = hc.frf.FRFilter(uvd)
-
-
 
 filter_factor     = [1e-8]
 print("filter factor = "+str(filter_factor))
@@ -78,12 +75,49 @@ filt_data_incomplete = copy.deepcopy(F_incomplete.data)
 filt_data_raw=copy.deepcopy(F_raw.data)
 
 
+for k in F.data:
+    filter_center     = [0]         
+    filter_half_width = [0.25e-3]
 
+    # unitless
+
+    # make covariance
+    C = uvt.dspec.dayenu_mat_inv(times, filter_center, filter_half_width, filter_factor, no_regularization=False)
+
+    # take inverse to get filter matrix
+    R = np.linalg.pinv(C, rcond=1e-10)
+
+    # notch filter the data first!
+
+    filt_data_complete[k] = R @ filt_data_complete[k]
+    filt_data_incomplete[k] = R @ filt_data_incomplete[k]
+    filt_data_raw[k] = R @ filt_data_raw[k]
+
+print("notch filter done")
 for k in F.data:
     blvec = (antpos[k[1]] - antpos[k[0]])
     bl_len_EW = blvec[0]
     fringe_value=m*bl_len_EW
    
+    
+#     if np.abs(fringe_value)<=0.5:
+#         filter_center     = [0]         
+#         filter_half_width = 0.25e-3
+
+#         # unitless
+#         filter_factor=1e-8
+
+#         # make covariance
+#         C = uvt.dspec.dayenu_mat_inv(times, filter_center, filter_half_width, filter_factor, no_regularization=False)
+
+#         # take inverse to get filter matrix
+#         R = np.linalg.pinv(C, rcond=1e-10)
+
+#         # notch filter the data first!
+
+#         filt_data_complete[k] = R @ filt_data_complete[k]
+#         filt_data_incomplete[k] = R @ filt_data_incomplete[k]
+#         filt_data_raw[k] = R @ filt_data_raw[k]
 
 
     if fringe_value > 0:
@@ -97,6 +131,11 @@ for k in F.data:
         filter_center = -gmean * 1e-3
         filter_half_width = np.abs(gsigma) * 2 * 1e-3
       
+#         filter_center = -fringe_value * 1e-3
+#         filter_half_width = 0.4 * 1e-3   
+        
+        
+
 
         C = uvt.dspec.dayenu_mat_inv(times, filter_center, filter_half_width, filter_factor, no_regularization=False)
         R = np.linalg.pinv(C, rcond=1e-10)
@@ -119,6 +158,10 @@ for k in F.data:
         filter_center = -gmean * 1e-3
     
         filter_half_width = np.abs(gsigma) * 2 * 1e-3
+#         print(filter_center,filter_half_width)
+
+#         filter_center = -fringe_value * 1e-3
+#         filter_half_width = 0.4 * 1e-3
             
         C = uvt.dspec.dayenu_mat_inv(times, filter_center, filter_half_width, filter_factor, no_regularization=False)
         R = np.linalg.pinv(C, rcond=1e-10)
@@ -132,15 +175,12 @@ for k in F.data:
 
 
 
+    
 
 
-
-F.write_data(filt_data_complete,path+"Model_complete_filtered_Gaussian.uvh5",overwrite=True)
-F.write_data(filt_data_incomplete,path+"Model_incomplete_filtered_Gaussian.uvh5",overwrite=True)
-F.write_data(filt_data_raw,path+"Raw_data_filtered_no_noise_Gaussian.uvh5",overwrite=True)
-# F.write_data(filt_data_raw,path+"Raw_data_filtered_Gaussian.uvh5",overwrite=True)
-
-
+F.write_data(filt_data_complete,path+"Model_complete_filtered_Gaussian_Nick.uvh5",overwrite=True)
+F.write_data(filt_data_incomplete,path+"Model_incomplete_filtered_Gaussian_Nick.uvh5",overwrite=True)
+F.write_data(filt_data_raw,path+"Raw_data_filtered_Gaussian_Nick.uvh5",overwrite=True)
 
 
 

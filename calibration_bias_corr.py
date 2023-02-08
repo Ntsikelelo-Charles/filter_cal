@@ -40,9 +40,9 @@ for filt in range (len(all_filter_type)):
     sigma_frac=np.load('/net/ike/vault-ike/ntsikelelo/Simulated_data_files/sigma_frac_'+str(filter_max)+'.npy')                   
 
 
-    t=np.array([118,126])
-#     t=np.zeros((8),dtype=int)
-#     t[0:8]=np.linspace(0,200,8)
+#     t=np.array([118,126])
+    t=np.zeros((8),dtype=int)
+    t[0:8]=np.linspace(0,200,8)
     chisq_perfect=np.zeros(shape=(200,308))
     chisq_perfect_redcal=np.zeros(shape=(200,308))
     gains_all_times=np.zeros(shape=(91,200,308),dtype=complex)

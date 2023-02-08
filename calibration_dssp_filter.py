@@ -11,7 +11,7 @@ import hera_pspec as hp
 import hera_cal as hc
 import healpy
 
-path='/net/ike/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 path_raw_data='/home/ntsikelelo/Simulated_data_files/UVH5_files/'
 
 ## need for gain keys
@@ -39,7 +39,7 @@ for filt in range (len(all_filter_type)):
 
 
 
-    sigma_frac=np.load('/net/ike/vault-ike/ntsikelelo/Simulated_data_files/sigma_frac_'+str(filter_max)+'.npy')                   
+    sigma_frac=np.load('/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/sigma_frac_'+str(filter_max)+'.npy')                   
 
 
 #     t=np.array([118,126])
@@ -125,19 +125,11 @@ for filt in range (len(all_filter_type)):
             raw_data_no_filter, _, _ = raw_no_filter.build_datacontainers()
 
 
-            Nrms= 1e-5
+            Nrms =1e-3
             #Choosing baseline cut
 
-            noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / Nrms**2 for k in raw_data}
-
-            if mode=="incomplete_with_filter_baseline_cut" or mode=="complete_with_filter_baseline_cut" :
-                print("base line cut")
-                for k in raw_data:
-                    blvec = (antpos[k[0]] - antpos[k[1]])
-                    bl_len_EW = np.abs(blvec[0])
-                   
-                    if bl_len_EW < 15:    
-                        noise_wgts[k][:] = 1e-40
+            # get chisq after redcal and abscal
+            noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / (sigma_frac*Nrms)**2 for k in raw_data}
 
 
             print("data loaded")                
@@ -186,7 +178,18 @@ for filt in range (len(all_filter_type)):
             hc.apply_cal.calibrate_in_place(redcal_data, lincal_gains)
             # run post-redundant calibration abscal
             print("performing abs_cal post redcal")
-            abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False)
+            
+            if mode=="incomplete_with_filter_baseline_cut" or mode=="complete_with_filter_baseline_cut" :
+                print("base line cut")
+                for k in raw_data:
+                    blvec = (antpos[k[0]] - antpos[k[1]])
+                    bl_len_EW = np.abs(blvec[0])
+
+                    if bl_len_EW < 30:    
+                        noise_wgts[k][:] = 1e-40
+
+
+            abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False, phs_max_iter=100, phs_conv_crit=1e-6)
 
             print("done callibration")
             ref_ant = (0, 'Jee')
@@ -195,7 +198,7 @@ for filt in range (len(all_filter_type)):
 
             # make sure it has the same reference antenna
             hc.abscal.rephase_to_refant(total_gains, ref_ant)
-            # get chisq after redcal and abscal
+            #overwrite weights for chi-sqaure
             noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / (sigma_frac*Nrms)**2 for k in raw_data}
             abs_chisq, nObs, _, _ = hc.utils.chisq(raw_data, model_data, gains=total_gains, data_wgts=noise_wgts)
             chisq_dof = nObs.mean() - len(abscal_gains)

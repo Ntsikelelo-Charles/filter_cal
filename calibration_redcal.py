@@ -128,7 +128,7 @@ for filt in range (len(all_filter_type)):
                     blvec = (antpos[k[0]] - antpos[k[1]])
                     bl_len_EW = np.abs(blvec[0])
                     
-                    if bl_len_EW < 40:    
+                    if bl_len_EW < 30:    
                         noise_wgts[k][:] = 1e-40
 
 

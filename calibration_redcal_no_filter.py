@@ -14,7 +14,7 @@ import healpy
 ## need for gain keys
 filter_type="no_filter"
 
-path='/net/ike/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 path_raw_data='/home/ntsikelelo/Simulated_data_files/UVH5_files/'
 
 
@@ -24,7 +24,7 @@ mode_array=np.array(["incomplete_no_filter_baseline_cut","incomplete_no_filter",
 # mode_array=np.array(["incomplete_no_filter_baseline_cut","complete_no_filter"])
 
 
-# t=np.array([0,1])
+# t=np.array([76, 78])
 t=np.zeros((8),dtype=int)
 t[0:8]=np.linspace(0,200,8)
 chisq_perfect=np.zeros(shape=(200,308))
@@ -96,16 +96,10 @@ for step in range (len(mode_array)):
         raw_data, _, _ = raw.build_datacontainers()
         
                                 
-        Nrms= 1e-5
+        Nrms =1e-3
         #Choosing baseline cut
         noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / Nrms**2 for k in raw_data}
-        if  mode=="incomplete_no_filter_baseline_cut":            
-            for k in raw_data:
-                blvec = antpos[k[0]] - antpos[k[1]]
-                if np.linalg.norm(blvec) < 40:    
-                    noise_wgts[k][:] = 1e-40
-                        
-                        
+                                                
         print("data loaded")                
         # get redundant baseline groups
         reds = hc.redcal.get_reds(antpos_d, pols=['ee'])
@@ -152,7 +146,18 @@ for step in range (len(mode_array)):
         hc.apply_cal.calibrate_in_place(redcal_data, lincal_gains)
         # run post-redundant calibration abscal
         print("performing abs_cal post redcal")
-        abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False)
+        n_cut=0
+        if  mode=="incomplete_no_filter_baseline_cut":            
+            for k in raw_data:
+                blvec = antpos[k[0]] - antpos[k[1]]
+               
+                if np.linalg.norm(blvec) < 40:    
+                    noise_wgts[k][:] = 1e-40
+                    n_cut=n_cut+1
+
+        
+        print("Cut EW baslines {} bls out of {}".format(n_cut, len(noise_wgts)))
+        abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False, phs_max_iter=100, phs_conv_crit=1e-6)
         
         print("done callibration")
         ant=18

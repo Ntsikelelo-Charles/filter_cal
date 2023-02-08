@@ -19,7 +19,7 @@ plt.rc('xtick', labelsize=14)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=14)
 
 N=120
-path2='/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path2='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 
 path='/net/jake/home/ntsikelelo/sims/'
 
@@ -28,7 +28,7 @@ path='/net/jake/home/ntsikelelo/sims/'
 
 
 
-glm_file_deep ='/vault-ike/nkern/conv_cal/sims/gleam_ATeam_25mJy_nside128_hera90.uvh5'
+glm_file_deep ='/net/sinatra/vault-ike/nkern/conv_cal/sims/gleam_ATeam_25mJy_nside128_hera90.uvh5'
 glm_deep = hc.io.HERAData(glm_file_deep)
 glm_deep.read(read_data=False)
 times = np.unique(glm_deep.time_array)
@@ -37,7 +37,7 @@ glm_deep.read(times=times[N:N+200],polarizations=[-5])
  
 # print(times[25:50].shape)
 
-glm_file ='/net/ike/vault-ike/nkern/conv_cal/sims/gleam_ATeam_100mJy_nside128_hera90.uvh5'
+glm_file ='/net/sinatra/vault-ike/nkern/conv_cal/sims/gleam_ATeam_100mJy_nside128_hera90.uvh5'
 glm = hc.io.HERAData(glm_file)
 glm.read(read_data=False)
 times = np.unique(glm.time_array)
@@ -45,7 +45,7 @@ glm.read(times=times[N:N+200],polarizations=[-5])
 
 
 
-gsm_file ='/net/ike/vault-ike/nkern/conv_cal/sims/gsm2016_nside128_hera90.uvh5'
+gsm_file ='/net/sinatra/vault-ike/nkern/conv_cal/sims/gsm2016_nside128_hera90.uvh5'
 gsm = hc.io.HERAData(gsm_file)
 gsm.read(read_data=False)
 gsm.time_array=gsm.time_array

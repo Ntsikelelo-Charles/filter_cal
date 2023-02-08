@@ -14,7 +14,7 @@ import healpy
 ## need for gain keys
 filter_type="no_filter"
 
-path='/net/ike/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
+path='/net/sinatra/vault-ike/ntsikelelo/Simulated_data_files/UVH5_files/'
 path_raw_data='/home/ntsikelelo/Simulated_data_files/UVH5_files/'
 
 
@@ -24,9 +24,9 @@ mode_array=np.array(["incomplete_Gaussian_filter_baseline_cut","complete_Gaussia
 # mode_array=np.array(["incomplete_no_filter_baseline_cut","complete_no_filter"])
 
 
-# t=np.array([118,126])
-t=np.zeros((8),dtype=int)
-t[0:8]=np.linspace(0,200,8)
+t=np.array([118,126])
+# t=np.zeros((8),dtype=int)
+# t[0:8]=np.linspace(0,200,8)
 chisq_perfect=np.zeros(shape=(200,308))
 chisq_perfect_redcal=np.zeros(shape=(200,308))
 gains_all_times=np.zeros(shape=(91,200,308),dtype=complex)
@@ -34,7 +34,7 @@ gains_all_times_redcal=np.zeros(shape=(91,200,308),dtype=complex)
 
 
 cal_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
-mdl_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)#
+mdl_wedge_all=np.zeros(shape=(200,32,308),dtype=complex)
 
 model_file=''
 raw_file_no_filter=path_raw_data+"Raw_data_with_noise.uvh5"
@@ -102,12 +102,8 @@ for step in range (len(mode_array)):
 
 
         Nrms= 1e-5
-        #Choosing baseline cut
-#         for key in model_data:
-#             print(key)
         noise_wgts = {k: np.ones_like(raw_data[k], dtype=float) / Nrms**2 for k in raw_data}
-
-        print("data loaded")                
+        
         # get redundant baseline groups
         reds = hc.redcal.get_reds(antpos_d, pols=['ee'])
         # filter redundant baselines
@@ -143,7 +139,8 @@ for step in range (len(mode_array)):
 
 
         # compute chisq
-        rc_red_chisq, chisq_per_ant = hc.redcal.normalized_chisq(raw_data, noise_wgts, filtered_reds, lincal_vis, lincal_gains)
+        chi_wgts = {k: np.ones_like(raw_data[k], dtype=float) / Nrms**2 for k in raw_data}
+        rc_red_chisq, chisq_per_ant = hc.redcal.normalized_chisq(raw_data, chi_wgts, filtered_reds, lincal_vis, lincal_gains)
         rc_red_chisq_dof = len(raw_data) - len(lincal_gains)
         rc_red_chisq = rc_red_chisq['Jee']
 
@@ -152,9 +149,23 @@ for step in range (len(mode_array)):
         redcal_data = copy.deepcopy(raw_data)
         hc.apply_cal.calibrate_in_place(redcal_data, lincal_gains)
         # run post-redundant calibration abscal
-        print("performing abs_cal post redcal")
-        abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, noise_wgts, rc_flags, verbose=False)
+        # enact pseudo baseline cut by modulating weights
+        # also cut if the |angle| of the model-to-redcaldata ratio exceeds 2 radians
+        Ncut=0
+        for k in raw_data:
+                blvec = (antpos[k[0]] - antpos[k[1]])
+                bl_len_EW = np.abs(blvec[0])
 
+                if bl_len_EW < 30:    
+                    noise_wgts[k][:] = 1e-40
+                    Ncut+=1
+        
+        print("data loaded") 
+        print("Cut EW baslines {} bls out of {}".format(Ncut, len(noise_wgts)))
+        abs_noise_wgts = copy.deepcopy(noise_wgts)
+      
+
+        abscal_gains = hc.abscal.post_redcal_abscal(model_data, redcal_data, abs_noise_wgts, rc_flags, verbose=False, phs_max_iter=100, phs_conv_crit=1e-6)
         print("done callibration")
         ref_ant = (0, 'Jee')
         # combine redcal and abscal gains
@@ -163,9 +174,6 @@ for step in range (len(mode_array)):
         # make sure it has the same reference antenna
         hc.abscal.rephase_to_refant(total_gains, ref_ant)
         # get chisq after redcal and abscal
-        sigma_frac=np.load("/net/ike/vault-ike/ntsikelelo/Simulated_data_files/sigma_fac_Gaussian.npy", allow_pickle=True).item()
-        for key in sigma_frac:
-            noise_wgts[key] = noise_wgts[key]*(1/sigma_frac[key])**2
         
         abs_chisq, nObs, _, _ = hc.utils.chisq(raw_data, model_data, gains=total_gains, data_wgts=noise_wgts)
         chisq_dof = nObs.mean() - len(abscal_gains)
